@@ -10,14 +10,11 @@ on:
 
 jobs:
   build:
-    runs-on: macos-13
+    runs-on: macos-latest
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
-    - name: Select Xcode version
-      run: sudo xcode-select -s /Applications/Xcode_15.0.app/Contents/Developer
       
     - name: Build SlatePDF
       run: |
@@ -79,7 +76,7 @@ jobs:
         
   release:
     needs: build
-    runs-on: macos-13
+    runs-on: macos-latest
     if: startsWith(github.ref, 'refs/tags/v')
     
     steps:
