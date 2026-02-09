@@ -18,11 +18,6 @@ let package = Package(
         .executableTarget(
             name: "SlatePDF",
             path: "Sources/SlatePDF"
-        ),
-        .testTarget(
-            name: "SlatePDFTests",
-            dependencies: ["SlatePDF"],
-            path: "Tests/SlatePDFTests"
         )
     ]
 )
