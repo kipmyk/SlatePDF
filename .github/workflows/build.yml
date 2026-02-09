@@ -1,0 +1,100 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: macos-13
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_15.0.app/Contents/Developer
+      
+    - name: Build SlatePDF
+      run: |
+        swift build -c release
+        
+    - name: Create App Bundle
+      run: |
+        mkdir -p SlatePDF.app/Contents/MacOS
+        mkdir -p SlatePDF.app/Contents/Resources
+        
+        # Copy executable
+        cp .build/release/SlatePDF SlatePDF.app/Contents/MacOS/
+        
+        # Create Info.plist
+        cat > SlatePDF.app/Contents/Info.plist << EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>CFBundleExecutable</key>
+            <string>SlatePDF</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.kipmyk.slatepdf</string>
+            <key>CFBundleName</key>
+            <string>SlatePDF</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>1.0.0</string>
+            <key>CFBundleVersion</key>
+            <string>1</string>
+            <key>LSMinimumSystemVersion</key>
+            <string>13.0</string>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+        </dict>
+        </plist>
+        EOF
+        
+    - name: Install create-dmg
+      run: brew install create-dmg
+      
+    - name: Create DMG
+      run: |
+        create-dmg \
+          --volname "SlatePDF" \
+          --window-pos 200 120 \
+          --window-size 800 400 \
+          --icon-size 100 \
+          --app-drop-link 600 185 \
+          "SlatePDF.dmg" \
+          "SlatePDF.app"
+          
+    - name: Upload DMG as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: SlatePDF-dmg
+        path: SlatePDF.dmg
+        
+  release:
+    needs: build
+    runs-on: macos-13
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download DMG artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: SlatePDF-dmg
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: SlatePDF.dmg
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
